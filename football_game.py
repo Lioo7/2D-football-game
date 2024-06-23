@@ -26,21 +26,12 @@ except pygame.error as e:
     pygame.quit()
     exit()
 
-# Player settings
-PLAYER_SIZE = 50
-PLAYER_A_SPEED = 5
-PLAYER_B_SPEED = 3
-
-# Goal settings
-GOAL_WIDTH = 100
-GOAL_HEIGHT = 200
-
 # Font settings
 font = pygame.font.Font(None, 50)
 
 # Initialize player positions
-player_a = pygame.Rect(WIDTH // 4 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2, PLAYER_SIZE, PLAYER_SIZE)
-player_b = pygame.Rect(3 * WIDTH // 4 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2, PLAYER_SIZE, PLAYER_SIZE)
+player_a = pygame.Rect(WIDTH // 4 - 25, HEIGHT // 2 - 25, 50, 50)
+player_b = pygame.Rect(3 * WIDTH // 4 - 25, HEIGHT // 2 - 25, 50, 50)
 
 # Initialize ball
 ball = pygame.Rect(WIDTH // 2 - 15, HEIGHT // 2 - 15, 30, 30)
@@ -48,8 +39,8 @@ ball_speed_x = 5 * random.choice((-1, 1))
 ball_speed_y = 5 * random.choice((-1, 1))
 
 # Goals
-goal_a = pygame.Rect(0, HEIGHT // 2 - GOAL_HEIGHT // 2, 10, GOAL_HEIGHT)
-goal_b = pygame.Rect(WIDTH - 10, HEIGHT // 2 - GOAL_HEIGHT // 2, 10, GOAL_HEIGHT)
+goal_a = pygame.Rect(0, HEIGHT // 2 - 100, 10, 200)
+goal_b = pygame.Rect(WIDTH - 10, HEIGHT // 2 - 100, 10, 200)
 
 # Score
 score_a = 0
@@ -82,24 +73,24 @@ if os.path.isfile(background_music_path):
 
 
 def handle_player_a_movement(keys, player):
-    global PLAYER_A_SPEED, HEIGHT, WIDTH
+    global HEIGHT
     if keys[pygame.K_LEFT] and player.left > 0:
-        player.x -= PLAYER_A_SPEED
+        player.x -= 5
     if keys[pygame.K_RIGHT] and player.right < WIDTH:
-        player.x += PLAYER_A_SPEED
+        player.x += 5
     if keys[pygame.K_UP] and player.top > 0:
-        player.y -= PLAYER_A_SPEED
+        player.y -= 5
     if keys[pygame.K_DOWN] and player.bottom < HEIGHT:
-        player.y += PLAYER_A_SPEED
+        player.y += 5
 
 
 def handle_b_movement(ball, player):
-    global PLAYER_B_SPEED, HEIGHT
+    global HEIGHT
     if ball.y < player.y:
-        player.y -= PLAYER_B_SPEED
-    elif ball.y > player.y + PLAYER_SIZE:
-        player.y += PLAYER_B_SPEED
-    player.y = max(0, min(player.y, HEIGHT - PLAYER_SIZE))
+        player.y -= 3
+    elif ball.y > player.y + 50:
+        player.y += 3
+    player.y = max(0, min(player.y, HEIGHT - 50))
 
 
 def handle_ball_movement(ball, ball_speed_x, ball_speed_y):
@@ -139,11 +130,13 @@ def handle_collisions(ball, ball_speed_x, ball_speed_y, player_a, player_b, goal
         score_b += 1
         reset_ball()
         if goal_sound:
+            goal_sound.stop()  # Stop the current sound if it exists
             pygame.mixer.Sound.play(goal_sound)
     if ball.colliderect(goal_b):
         score_a += 1
         reset_ball()
         if goal_sound:
+            goal_sound.stop()  # Stop the current sound if it exists
             pygame.mixer.Sound.play(goal_sound)
 
     # Update global variables
@@ -168,17 +161,42 @@ while not game_over:
             pygame.quit()
             exit()
 
-    # User controls for Player A
+    # Update remaining_seconds based on elapsed game time
+    current_ticks = pygame.time.get_ticks()
+    elapsed_seconds = (current_ticks - start_ticks) // 1000
+    remaining_seconds = max(0, 90 - elapsed_seconds)  # Update remaining game time (90 seconds game time)
+
+    # Display time
+    time_bg_rect = pygame.Rect(WIDTH // 2 - 40, 10, 80, 50)
+    pygame.draw.rect(screen, WHITE, time_bg_rect)
+    pygame.draw.rect(screen, BLACK, time_bg_rect, 2)
+    time_text = font.render(f"{remaining_seconds}", True, BLACK)
+    screen.blit(time_text, (time_bg_rect.centerx - time_text.get_width() // 2, time_bg_rect.centery - time_text.get_height() // 2))
+
+    # Display scoreboard labels and scores
+    scoreboard_bg_rect = pygame.Rect(WIDTH // 2 - 150, 70, 300, 100)
+    pygame.draw.rect(screen, WHITE, scoreboard_bg_rect)
+    pygame.draw.rect(screen, BLACK, scoreboard_bg_rect, 2)
+
+    # Render player A (Home) label and score
+    player_a_label = font.render("Home", True, BLACK)
+    screen.blit(player_a_label, (scoreboard_bg_rect.left + 20, scoreboard_bg_rect.top + 20))
+    score_a_text = font.render(f"{score_a}", True, BLACK)
+    screen.blit(score_a_text, (scoreboard_bg_rect.left + 20, scoreboard_bg_rect.top + 60))
+
+    # Render player B (Away) label and score
+    player_b_label = font.render("Away", True, BLACK)
+    screen.blit(player_b_label, (scoreboard_bg_rect.right - player_b_label.get_width() - 20, scoreboard_bg_rect.top + 20))
+    score_b_text = font.render(f"{score_b}", True, BLACK)
+    screen.blit(score_b_text, (scoreboard_bg_rect.right - score_b_text.get_width() - 60, scoreboard_bg_rect.top + 60))
+
+    # Handle player controls
     keys = pygame.key.get_pressed()
     handle_player_a_movement(keys, player_a)
-
-    # Movement for Player B (simulated opponent)
     handle_b_movement(ball, player_b)
 
-    # Ball movement
+    # Handle ball movement and collisions
     handle_ball_movement(ball, ball_speed_x, ball_speed_y)
-
-    # Handle collisions
     ball_speed_x, ball_speed_y = handle_collisions(ball, ball_speed_x, ball_speed_y, player_a, player_b, goal_a, goal_b)
 
     # Draw players, ball, and goals
@@ -188,22 +206,12 @@ while not game_over:
     pygame.draw.rect(screen, BLACK, goal_a)
     pygame.draw.rect(screen, BLACK, goal_b)
 
-    # Display score
-    score_text = font.render(f"{score_a} - {score_b}", True, BLACK)
-    screen.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, 10))
-
-    # Timer
-    seconds = (pygame.time.get_ticks() - start_ticks) // 1000
-    if seconds >= 90:
-        game_over = True
-
-    # Update display
     pygame.display.flip()
 
-    # Frame rate
     clock.tick(60)
 
-# Determine winner
+
+# End game screen
 if score_a > score_b:
     winner_text = "Player A wins!"
 elif score_b > score_a:
@@ -211,17 +219,15 @@ elif score_b > score_a:
 else:
     winner_text = "It's a draw!"
 
-# Display final score and options
 final_text = font.render(f"Final Score: {score_a} - {score_b}", True, BLACK)
 winner_text_rendered = font.render(winner_text, True, BLACK)
 
-while True:  # Loop for end screen
+while True:
     screen.blit(bg_image, (0, 0))
 
     screen.blit(final_text, (WIDTH // 2 - final_text.get_width() // 2, HEIGHT // 2 - 50))
     screen.blit(winner_text_rendered, (WIDTH // 2 - winner_text_rendered.get_width() // 2, HEIGHT // 2 + 50))
 
-    # Display options: restart or quit
     restart_text = font.render("1. Restart", True, BLACK)
     quit_text = font.render("2. Quit", True, BLACK)
 
@@ -230,22 +236,19 @@ while True:  # Loop for end screen
 
     pygame.display.flip()
 
-    # Event handling for options
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_1:  # Restart
-                # Reset game state variables
+            if event.key == pygame.K_1:
                 score_a = 0
                 score_b = 0
                 start_ticks = pygame.time.get_ticks()
                 game_over = False
                 reset_ball()
-                # Reset player positions if needed
-                player_a = pygame.Rect(WIDTH // 4 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2, PLAYER_SIZE, PLAYER_SIZE)
-                player_b = pygame.Rect(3 * WIDTH // 4 - PLAYER_SIZE // 2, HEIGHT // 2 - PLAYER_SIZE // 2, PLAYER_SIZE, PLAYER_SIZE)
-            elif event.key == pygame.K_2:  # Quit
+                player_a = pygame.Rect(WIDTH // 4 - 25, HEIGHT // 2 - 25, 50, 50)
+                player_b = pygame.Rect(3 * WIDTH // 4 - 25, HEIGHT // 2 - 25, 50, 50)
+            elif event.key == pygame.K_2:
                 pygame.quit()
                 exit()
